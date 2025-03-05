@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Container, Typography, Box, Paper, Tabs, Tab, Grid, Card, CardContent, CardMedia, CardActions, Button, Chip, Avatar, Divider, List, ListItem, ListItemText, ListItemAvatar, Badge } from '@mui/material';
 import PersonIcon from '@mui/icons-material/Person';
 import StarIcon from '@mui/icons-material/Star';
@@ -6,6 +6,8 @@ import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 
 const Profile = () => {
   const [tabValue, setTabValue] = useState(0);
+  const [reportedItems, setReportedItems] = useState([]);
+  const [foundItems, setFoundItems] = useState([]);
 
   // Mock user data
   const user = {
@@ -17,51 +19,20 @@ const Profile = () => {
     level: 'Gold'
   };
 
-  // Mock reported items
-  const reportedItems = [
-    {
-      id: 1,
-      name: 'iPhone 13 Pro',
-      category: 'Electronics',
-      description: 'Black iPhone 13 Pro with a blue case. Has a crack on the top right corner of the screen.',
-      date: '2023-03-01',
-      location: 'Central Park, New York',
-      status: 'lost',
-      image: 'https://via.placeholder.com/150',
-      reward: '$100',
-      isResolved: false
-    },
-    {
-      id: 2,
-      name: 'Leather Wallet',
-      category: 'Wallet/Purse',
-      description: 'Brown leather wallet with ID, credit cards, and some cash.',
-      date: '2023-02-15',
-      location: 'Grand Central Station, New York',
-      status: 'lost',
-      image: 'https://via.placeholder.com/150',
-      reward: '$50',
-      isResolved: true,
-      resolvedDate: '2023-02-20'
+  // Load items from localStorage when component mounts
+  useEffect(() => {
+    // Load lost items
+    const storedLostItems = localStorage.getItem('userLostItems');
+    if (storedLostItems) {
+      setReportedItems(JSON.parse(storedLostItems));
     }
-  ];
 
-  // Mock found items
-  const foundItems = [
-    {
-      id: 3,
-      name: 'Gold Ring',
-      category: 'Jewelry',
-      description: 'Gold ring with a small diamond. Has an engraving inside.',
-      date: '2023-03-02',
-      location: 'Times Square, New York',
-      status: 'found',
-      image: 'https://via.placeholder.com/150',
-      isResolved: true,
-      resolvedDate: '2023-03-05',
-      pointsEarned: 50
+    // Load found items
+    const storedFoundItems = localStorage.getItem('userFoundItems');
+    if (storedFoundItems) {
+      setFoundItems(JSON.parse(storedFoundItems));
     }
-  ];
+  }, []);
 
   // Mock notifications
   const notifications = [
@@ -90,6 +61,55 @@ const Profile = () => {
 
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
+  };
+
+  // Function to mark a lost item as found
+  const handleMarkAsFound = (itemId) => {
+    const updatedItems = reportedItems.map(item => {
+      if (item.id === itemId) {
+        return {
+          ...item,
+          isResolved: true,
+          resolvedDate: new Date().toISOString().split('T')[0]
+        };
+      }
+      return item;
+    });
+    
+    setReportedItems(updatedItems);
+    localStorage.setItem('userLostItems', JSON.stringify(updatedItems));
+  };
+
+  // Function to mark a found item as returned
+  const handleMarkAsReturned = (itemId) => {
+    const updatedItems = foundItems.map(item => {
+      if (item.id === itemId) {
+        return {
+          ...item,
+          isResolved: true,
+          resolvedDate: new Date().toISOString().split('T')[0],
+          pointsEarned: 50 // Arbitrary points for returning an item
+        };
+      }
+      return item;
+    });
+    
+    setFoundItems(updatedItems);
+    localStorage.setItem('userFoundItems', JSON.stringify(updatedItems));
+  };
+
+  // Function to delete a lost item
+  const handleDeleteLostItem = (itemId) => {
+    const updatedItems = reportedItems.filter(item => item.id !== itemId);
+    setReportedItems(updatedItems);
+    localStorage.setItem('userLostItems', JSON.stringify(updatedItems));
+  };
+
+  // Function to delete a found item
+  const handleDeleteFoundItem = (itemId) => {
+    const updatedItems = foundItems.filter(item => item.id !== itemId);
+    setFoundItems(updatedItems);
+    localStorage.setItem('userFoundItems', JSON.stringify(updatedItems));
   };
 
   return (
@@ -208,9 +228,9 @@ const Profile = () => {
                         <CardActions>
                           <Button size="small" color="primary">Edit</Button>
                           {!item.isResolved && (
-                            <Button size="small" color="primary">Mark as Found</Button>
+                            <Button size="small" color="primary" onClick={() => handleMarkAsFound(item.id)}>Mark as Found</Button>
                           )}
-                          <Button size="small" color="error">Delete</Button>
+                          <Button size="small" color="error" onClick={() => handleDeleteLostItem(item.id)}>Delete</Button>
                         </CardActions>
                       </Card>
                     </Grid>
@@ -269,9 +289,9 @@ const Profile = () => {
                         <CardActions>
                           <Button size="small" color="primary">Edit</Button>
                           {!item.isResolved && (
-                            <Button size="small" color="primary">Mark as Returned</Button>
+                            <Button size="small" color="primary" onClick={() => handleMarkAsReturned(item.id)}>Mark as Returned</Button>
                           )}
-                          <Button size="small" color="error">Delete</Button>
+                          <Button size="small" color="error" onClick={() => handleDeleteFoundItem(item.id)}>Delete</Button>
                         </CardActions>
                       </Card>
                     </Grid>

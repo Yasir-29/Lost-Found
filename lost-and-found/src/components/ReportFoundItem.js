@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Container, Typography, TextField, Button, Grid, MenuItem, Box, Paper } from '@mui/material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
@@ -17,6 +17,20 @@ const ReportFoundItem = () => {
     image: null
   });
 
+  // Load form data from local storage when component mounts
+  useEffect(() => {
+    const savedFormData = localStorage.getItem('foundItemFormData');
+    if (savedFormData) {
+      const parsedData = JSON.parse(savedFormData);
+      // Convert date string back to Date object if it exists
+      if (parsedData.dateFound) {
+        parsedData.dateFound = new Date(parsedData.dateFound);
+      }
+      // We can't store the image in localStorage, so it will remain null
+      setFormData(parsedData);
+    }
+  }, []);
+
   const categories = [
     'Electronics', 'Jewelry', 'Clothing', 'Accessories', 'Documents', 
     'Keys', 'Wallet/Purse', 'Bag/Backpack', 'Other'
@@ -28,17 +42,29 @@ const ReportFoundItem = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData({
+    const updatedFormData = {
       ...formData,
       [name]: value
-    });
+    };
+    setFormData(updatedFormData);
+    
+    // Save to local storage (excluding the image)
+    const dataForStorage = { ...updatedFormData };
+    delete dataForStorage.image;
+    localStorage.setItem('foundItemFormData', JSON.stringify(dataForStorage));
   };
 
   const handleDateChange = (date) => {
-    setFormData({
+    const updatedFormData = {
       ...formData,
       dateFound: date
-    });
+    };
+    setFormData(updatedFormData);
+    
+    // Save to local storage (excluding the image)
+    const dataForStorage = { ...updatedFormData };
+    delete dataForStorage.image;
+    localStorage.setItem('foundItemFormData', JSON.stringify(dataForStorage));
   };
 
   const handleImageChange = (e) => {
@@ -47,13 +73,61 @@ const ReportFoundItem = () => {
         ...formData,
         image: e.target.files[0]
       });
+      // We don't save the image to localStorage as it's not serializable
     }
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
     console.log('Form submitted:', formData);
-    // Here you would typically send the data to your backend
+    
+    // Generate a unique ID for the item
+    const itemId = Date.now();
+    
+    // Create a new item object with additional fields
+    const newItem = {
+      id: itemId,
+      name: formData.itemName,
+      category: formData.category,
+      description: formData.description,
+      date: formData.dateFound ? formData.dateFound.toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+      location: formData.location,
+      color: formData.color,
+      uniqueIdentifiers: formData.uniqueIdentifiers,
+      contactInfo: formData.contactInfo,
+      dropOffLocation: formData.dropOffLocation,
+      status: 'found',
+      isResolved: false,
+      image: formData.image ? URL.createObjectURL(formData.image) : 'https://via.placeholder.com/150',
+      createdAt: new Date().toISOString()
+    };
+    
+    // Get existing found items from localStorage or initialize empty array
+    const existingFoundItems = JSON.parse(localStorage.getItem('userFoundItems') || '[]');
+    
+    // Add new item to the array
+    const updatedFoundItems = [newItem, ...existingFoundItems];
+    
+    // Save updated array back to localStorage
+    localStorage.setItem('userFoundItems', JSON.stringify(updatedFoundItems));
+    
+    // Clear the form data from local storage after successful submission
+    localStorage.removeItem('foundItemFormData');
+    
+    // Reset the form
+    setFormData({
+      itemName: '',
+      category: '',
+      description: '',
+      dateFound: null,
+      location: '',
+      color: '',
+      uniqueIdentifiers: '',
+      contactInfo: '',
+      dropOffLocation: '',
+      image: null
+    });
+    
     alert('Thank you for reporting a found item! We will try to find its owner.');
   };
 
